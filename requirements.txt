@@ -1,0 +1,20 @@
+# For the web framework
+fastapi
+uvicorn[standard]
+
+# For Gemini API
+google-generativeai
+python-dotenv
+
+# For handling URL content
+requests
+beautifulsoup4
+
+# For handling PDF uploads
+python-multipart
+
+# For creating PDF files
+fpdf2
+
+# For creating DOCX (Word) files
+python-docx
