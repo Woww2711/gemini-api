@@ -6,7 +6,7 @@ import httpx
 from bs4 import BeautifulSoup
 from .dependencies import MAX_REQUEST_SIZE
 
-from . import config, schemas
+from . import config, schemas, exceptions
 
 client = genai.Client(api_key=config.GEMINI_API_KEY)
 
@@ -118,5 +118,10 @@ async def summarize_url(url: str, length: str | None, tone: str | None, custom_p
             return await summarize_text(text, length, tone, custom_prompt)
         else:
             raise ValueError(f"Unsupported content type '{content_type}'.")
+    except httpx.HTTPStatusError as e:
+        # This catches errors like 403 Forbidden, 404 Not Found, etc.
+        # We raise our custom exception with the details.
+        raise exceptions.URLAccessError(url=str(e.request.url), status_code=e.response.status_code) from e
     except httpx.RequestError as e:
-        raise ValueError(f"Could not fetch or process the URL: {url}") from e
+        # This catches other network errors like DNS failures or connection timeouts.
+        raise ValueError(f"A network error occurred while trying to access the URL: {url}") from e

@@ -2,14 +2,14 @@
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query, Response, Depends
 from pydantic import HttpUrl
-from . import schemas, services, formatters, dependencies
+from . import schemas, services, formatters, dependencies, exceptions
 from enum import Enum
 
 # ... (Enums are unchanged) ...
 class LengthOption(str, Enum): 
-    short = "short"
-    medium = "medium"
-    detailed = "detailed"
+    short = "Short"
+    medium = "Medium"
+    detailed = "Detailed"
 
 class ToneOption(str, Enum): 
     professional = "Professional"
@@ -63,14 +63,18 @@ async def summarize_url_endpoint(
             return schemas.EnhancedSummaryResponse(title=title, summary=summary_text, usage=usage_data)
         
         return build_response(summary_text, output_format)
+    except exceptions.URLAccessError as e:
+        # This catches our custom error and returns the *correct* status code and detail.
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
     except (ValueError, RuntimeError) as e:
+        # This generic handler remains for other types of errors.
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/paste", 
              response_model=schemas.EnhancedSummaryResponse,
              dependencies=[Depends(dependencies.limit_content_length)])
 async def summarize_from_paste_endpoint(
-    text: str = Form(..., examples=["Your long paragraph of text to be summarized goes here..."]),
+    text: str = Form(..., examples=[""]),
     custom_prompt: str | None = Form(None, description="Optional: Provide a specific prompt instead of summarizing.", examples=['']),
     length: LengthOption | None = Query(None), 
     tone: ToneOption | None = Query(None),
