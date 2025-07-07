@@ -91,7 +91,7 @@ The application loads the Gemini API key from an environment variable.
 -   Get your API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
 -   Replace `YOUR_API_KEY_HERE` with your actual key:
     ```
-    GOOGLE_API_KEY="AIzaSy...your...key...here"
+    GEMINI_API_KEY="AIzaSy...your...key...here"
     ```
 The application will automatically load this key on startup. The `.env` file is included in `.gitignore` to prevent accidental commits of your secret key.
 
