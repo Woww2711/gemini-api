@@ -24,14 +24,35 @@ class OutputFormat(str, Enum):
     pdf = "pdf"
     docx = "docx"
 
-router = APIRouter(prefix="/summarize", tags=["Summarization"])
+router = APIRouter(
+    prefix="/summarize", 
+    tags=["Summarization"], 
+    dependencies=[Depends(dependencies.limit_content_length)]
+)
 
-def build_response(summary_text: str, output_format: OutputFormat) -> Response:
-    if output_format == OutputFormat.text: return Response(content=summary_text, media_type="text/plain", headers={"Content-Disposition": 'attachment; filename="summary.txt"'})
-    if output_format == OutputFormat.markdown: return Response(content=summary_text, media_type="text/markdown", headers={"Content-Disposition": 'attachment; filename="summary.md"'})
-    if output_format == OutputFormat.pdf: return Response(content=formatters.to_pdf(summary_text), media_type="application/pdf", headers={"Content-Disposition": 'attachment; filename="summary.pdf"'})
-    if output_format == OutputFormat.docx: return Response(content=formatters.to_docx(summary_text), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers={"Content-Disposition": 'attachment; filename="summary.docx"'})
+def build_response(summary_text: str, output_format: OutputFormat, gemini_response) -> Response:
+    """
+    Takes summary text and the full Gemini response, and returns a file
+    response with token usage data embedded in the headers.
+    """
+    headers = {
+        "Content-Disposition": f'attachment; filename="ketqua.{output_format}"',
+        # Add token counts to the headers. Prefix with X- for custom headers.
+        "X-Prompt-Tokens": str(gemini_response.usage_metadata.prompt_token_count),
+        "X-Candidates-Tokens": str(gemini_response.usage_metadata.candidates_token_count),
+        "X-Total-Tokens": str(gemini_response.usage_metadata.total_token_count)
+    }
 
+    if output_format == OutputFormat.text:
+        return Response(content=summary_text, media_type="text/plain", headers=headers)
+    if output_format == OutputFormat.markdown:
+        return Response(content=summary_text, media_type="text/markdown", headers=headers)
+    if output_format == OutputFormat.pdf:
+        pdf_bytes = formatters.to_pdf(summary_text)
+        return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
+    if output_format == OutputFormat.docx:
+        docx_bytes = formatters.to_docx(summary_text)
+        return Response(content=docx_bytes, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers=headers)
 # --- UPDATED Endpoint Logic ---
 
 @router.post("/url", response_model=schemas.EnhancedSummaryResponse)
@@ -56,13 +77,13 @@ async def summarize_url_endpoint(
         
         if output_format == OutputFormat.json:
             usage_data = schemas.UsageMetadata(
-            prompt_token_count=gemini_response.usage_metadata.prompt_token_count,
-            candidates_token_count=gemini_response.usage_metadata.candidates_token_count,
-            total_token_count=gemini_response.usage_metadata.total_token_count,
-        )
+                prompt_token_count=gemini_response.usage_metadata.prompt_token_count,
+                candidates_token_count=gemini_response.usage_metadata.candidates_token_count,
+                total_token_count=gemini_response.usage_metadata.total_token_count
+            )
             return schemas.EnhancedSummaryResponse(title=title, summary=summary_text, usage=usage_data)
         
-        return build_response(summary_text, output_format)
+        return build_response(summary_text, output_format, gemini_response)
     except exceptions.URLAccessError as e:
         # This catches our custom error and returns the *correct* status code and detail.
         raise HTTPException(status_code=e.status_code, detail=e.detail)
@@ -93,13 +114,13 @@ async def summarize_from_paste_endpoint(
             
         if output_format == OutputFormat.json:
             usage_data = schemas.UsageMetadata(
-            prompt_token_count=gemini_response.usage_metadata.prompt_token_count,
-            candidates_token_count=gemini_response.usage_metadata.candidates_token_count,
-            total_token_count=gemini_response.usage_metadata.total_token_count,
-        )
+                prompt_token_count=gemini_response.usage_metadata.prompt_token_count,
+                candidates_token_count=gemini_response.usage_metadata.candidates_token_count,
+                total_token_count=gemini_response.usage_metadata.total_token_count,
+            )
             return schemas.EnhancedSummaryResponse(title=title, summary=summary_text, usage=usage_data)
         
-        return build_response(summary_text, output_format)
+        return build_response(summary_text, output_format, gemini_response)
     except (ValueError, RuntimeError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -127,13 +148,13 @@ async def summarize_pdf_upload_endpoint(
             
         if output_format == OutputFormat.json:
             usage_data = schemas.UsageMetadata(
-            prompt_token_count=gemini_response.usage_metadata.prompt_token_count,
-            candidates_token_count=gemini_response.usage_metadata.candidates_token_count,
-            total_token_count=gemini_response.usage_metadata.total_token_count,
-        )
+                prompt_token_count=gemini_response.usage_metadata.prompt_token_count,
+                candidates_token_count=gemini_response.usage_metadata.candidates_token_count,
+                total_token_count=gemini_response.usage_metadata.total_token_count,
+            )
             return schemas.EnhancedSummaryResponse(title=title, summary=summary_text, usage=usage_data)
-            
-        return build_response(summary_text, output_format)
+
+        return build_response(summary_text, output_format, gemini_response)
     except (ValueError, RuntimeError) as e:
         raise HTTPException(status_code=400, detail=str(e))
     finally:
