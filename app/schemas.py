@@ -13,13 +13,14 @@ class UsageMetadata(BaseModel):
 
 class TextRequest(BaseModel):
     text: str
+    custom_prompt: str | None = None
     class Config:
-        json_schema_extra = { "example": { "text": "..." } }
-
-class UrlRequest(BaseModel):
-    url: HttpUrl
-    class Config:
-        json_schema_extra = { "example": { "url": "https://en.wikipedia.org/wiki/Artificial_intelligence" } }
+        json_schema_extra = {
+            "example": {
+                "text": "Artificial intelligence (AI) is intelligence demonstrated by machines...",
+                "custom_prompt": "Explain this text to a five-year-old."
+            }
+        }
 
 class EnhancedSummaryResponse(BaseModel):
     """
