@@ -5,3 +5,4 @@ __pycache__/
 test.py
 temp_downloads/
 pdf/
+.gradio/
